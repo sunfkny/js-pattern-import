@@ -2,7 +2,8 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from "vscode";
 import * as path from "path";
-import { assert } from "console";
+import { generateExportName, buildStemCountMap } from "./utils/exportNameGenerator";
+import { collectFileInfos } from "./utils/fileInfoCollector";
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -14,7 +15,7 @@ export function activate(context: vscode.ExtensionContext) {
   // The command has been defined in the package.json file
   // Now provide the implementation of the command with registerCommand
   // The commandId parameter must match the command field in package.json
-  let disposable = vscode.commands.registerCommand("js-pattern-import.main", async () => {
+  const disposable = vscode.commands.registerCommand("js-pattern-import.main", async () => {
     // The code you place here will be executed every time your command is executed
     // Display a message box to the user
 
@@ -24,10 +25,10 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    let folder = path.dirname(activeUri.fsPath);
+    const currentFileDir = path.dirname(activeUri.fsPath);
 
     const pattern = await vscode.window.showInputBox({
-      title: `Enter the pattern you want to import at ${vscode.workspace.asRelativePath(folder, true)}`,
+      title: `Enter the pattern you want to import at ${vscode.workspace.asRelativePath(currentFileDir, true)}`,
       value: vscode.workspace.getConfiguration().get("js.pattern.import.pattern") || "*.{png,jpg,jpeg,svg}",
     });
 
@@ -35,27 +36,33 @@ export function activate(context: vscode.ExtensionContext) {
       return;
     }
 
-    const files = await vscode.workspace.findFiles(new vscode.RelativePattern(folder, pattern));
+    // Check if pattern contains ** (recursive pattern)
+    const isRecursive = pattern.includes("**");
+    // Always use current file directory as search folder, even for recursive patterns
+    const searchFolder = currentFileDir;
+
+    const files = await vscode.workspace.findFiles(new vscode.RelativePattern(searchFolder, pattern));
+
+    // First pass: collect all file stems to detect duplicates
+    const fileInfos = collectFileInfos(files, {
+      currentFileDir,
+      isRecursive,
+    });
+
+    // Count stem occurrences (considering path prefix for recursive patterns)
+    const stemCount = buildStemCountMap(fileInfos, isRecursive);
+
+    // Second pass: generate import/export statements
     const exportStatements: string[] = [];
     const importStatements: string[] = [];
-    files.forEach((file) => {
-      const filename = file.path.split("/").pop();
-      if (!filename) {
-        return;
-      }
-      let filenameWithoutSuffix = filename.split(".").shift();
-      const fileSuffix = filename.split(".").pop();
-      if (!filenameWithoutSuffix) {
-        return;
-      }
+    fileInfos.forEach((info) => {
+      const { relativePath } = info;
+      const exportName = generateExportName(info, { isRecursive, stemCount });
 
-      filenameWithoutSuffix = filenameWithoutSuffix.replace(/\s/g, "_").replace(/-/g, "_").replace(/@/g, "_");
-      if (!filenameWithoutSuffix.match(/^[a-zA-Z_$].*$/)) {
-        filenameWithoutSuffix = `${fileSuffix}_${filenameWithoutSuffix}`;
-      }
-
-      importStatements.push(`import ${filenameWithoutSuffix} from "./${filename}";`);
-      exportStatements.push(filenameWithoutSuffix);
+      // Use relative path for import statement
+      const importPath = relativePath.startsWith(".") ? relativePath : `./${relativePath}`;
+      importStatements.push(`import ${exportName} from "${importPath}";`);
+      exportStatements.push(exportName);
     });
 
 
@@ -82,7 +89,7 @@ export function activate(context: vscode.ExtensionContext) {
     const importStatementString = sortedImportStatements.join("\n");
     const exportStatementString = `export { ${sortedExportStatements.join(", ")} };`;
 
-    vscode.window.activeTextEditor?.edit((editBuilder) => {
+    vscode.window.activeTextEditor?.edit((editBuilder: vscode.TextEditorEdit) => {
       // if some text is selected, replace it with the import statements
       const selection = vscode.window.activeTextEditor?.selection;
       if (selection) {
@@ -100,4 +107,4 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 // This method is called when your extension is deactivated
-export function deactivate() {}
+export function deactivate() { }

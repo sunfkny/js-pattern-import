@@ -1,11 +1,15 @@
 {
   "name": "js-pattern-import",
   "displayName": "js-pattern-import",
-  "description": "",
+  "description": "A VS Code extension for batch importing files in a folder with pattern matching and automatic generation of import/export statements. Perfect for batch importing image assets.",
   "publisher": "sunfkny",
-  "version": "0.0.2",
+  "version": "0.0.3",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sunfkny/js-pattern-import"
+  },
   "engines": {
-    "vscode": "^1.77.0"
+    "vscode": "^1.105.1"
   },
   "categories": [
     "Other"
@@ -46,20 +50,20 @@
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src --ext ts",
     "test": "node ./out/test/runTest.js",
-    "package": "vsce package"
+    "package": "vsce package",
+    "publish": "vsce publish"
   },
   "devDependencies": {
-    "@types/glob": "^8.1.0",
-    "@types/mocha": "^10.0.1",
-    "@types/node": "16.x",
-    "@types/vscode": "^1.77.0",
-    "@typescript-eslint/eslint-plugin": "^5.56.0",
-    "@typescript-eslint/parser": "^5.56.0",
-    "@vscode/test-electron": "^2.3.0",
-    "eslint": "^8.36.0",
-    "glob": "^8.1.0",
-    "mocha": "^10.2.0",
-    "typescript": "^4.9.5",
-    "vsce": "^2.15.0"
+    "@eslint/js": "^9.39.1",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "~24.10.2",
+    "@types/vscode": "^1.105.1",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.7.1",
+    "glob": "^10.3.10",
+    "eslint": "^9.39.1",
+    "mocha": "^10.0.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.49.0"
   }
 }
